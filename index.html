@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MetalMarket - 글로벌 귀금속 및 주요 금속 실시간 시세 대시보드</title>
+  <meta name="description" content="금(XAU), 은(XAG), 구리(XCU), 플래티넘(XPT) 등 글로벌 주요 귀금속 및 원자재의 실시간 시세 카드뷰와 기간별 시세 변동 독립 차트를 제공하는 금융 대시보드 웹 앱입니다.">
+  <meta name="keywords" content="금시세, 은시세, 구리시세, 플래티넘시세, 귀금속, metalpriceAPI, 원자재차트, 골드시세">
+  <meta name="author" content="MetalMarket">
+
+  <!-- Google Fonts: Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    
+    <!-- ====================================================================
+         Header: Logo, Live Status, Currency/Unit Controls, Refresh, Settings
+         ==================================================================== -->
+    <header class="app-header" id="main-header">
+      <div class="brand-section">
+        <div class="brand-logo-wrap">
+          <span class="brand-logo-icon">💎</span>
+        </div>
+        <div class="brand-title-wrap">
+          <h1>
+            <span class="brand-name">MetalMarket</span>
+          </h1>
+          <p>글로벌 주요 금속 실시간 시세 &amp; 변동 분석 대시보드</p>
+        </div>
+      </div>
+
+      <div class="header-controls">
+        <!-- API Connection Status Badge -->
+        <div class="api-status-badge" id="api-status-badge" title="MetalpriceAPI 연결 상태">
+          <span class="status-dot"></span>
+          <span id="api-status-text">API 실시간 연동됨</span>
+        </div>
+
+        <!-- Currency Selector (USD / KRW) -->
+        <div class="control-pill-group" role="group" aria-label="통화 선택">
+          <button class="pill-btn" id="btn-currency-usd" data-currency="USD">USD ($)</button>
+          <button class="pill-btn active" id="btn-currency-krw" data-currency="KRW">KRW (₩)</button>
+        </div>
+
+        <!-- Unit Selector (oz / g / don) -->
+        <div class="control-pill-group" role="group" aria-label="단위 선택">
+          <button class="pill-btn active" id="btn-unit-oz" data-unit="oz">온스(oz)</button>
+          <button class="pill-btn" id="btn-unit-g" data-unit="g">그램(g)</button>
+          <button class="pill-btn" id="btn-unit-don" data-unit="don">돈(3.75g)</button>
+        </div>
+
+        <!-- Refresh Button -->
+        <button class="icon-btn" id="btn-manual-refresh" title="실시간 시세 새로고침" aria-label="새로고침">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- ====================================================================
+         Hero Status Bar: Headline, Update Time & Auto Refresh Indicator
+         ==================================================================== -->
+    <div class="hero-status-bar">
+      <div class="section-headline">
+        <h2>실시간 금속 시세 현황</h2>
+        <p>MetalpriceAPI 실시간 환율 및 글로벌 원자재 거래소 벤치마크</p>
+      </div>
+      <div class="update-time-meta">
+        <span id="update-time-text">마지막 갱신: 확인 중...</span>
+        <span id="auto-refresh-counter" title="자동 새로고침">⏳ 60s</span>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         Section 1: Top Metal Cards Grid (Card View)
+         ==================================================================== -->
+    <section class="metals-card-grid" id="metals-card-grid" aria-label="금속별 현재 시세 카드">
+      <!-- 1. Gold Card -->
+      <article class="metal-card card-xau" id="card-xau" data-symbol="XAU" onclick="scrollToChart('chart-container-xau')">
+        <div class="card-header">
+          <div class="metal-identity">
+            <div class="metal-badge-icon">🥇</div>
+            <div class="metal-names">
+              <h3>금 (Gold)</h3>
+              <span class="symbol-tag">XAU / USD</span>
+            </div>
+          </div>
+          <button class="card-action-btn" title="차트 보기">
+            차트 ↓
+          </button>
+        </div>
+        <div class="card-price-body">
+          <div class="price-main">
+            <span class="price-val" id="price-xau">--</span>
+            <span class="price-unit-label" id="unit-label-xau">/ oz</span>
+          </div>
+          <div class="change-row">
+            <span class="change-badge up" id="change-badge-xau">▲ +0.00%</span>
+            <span class="change-diff" id="diff-xau">(+$0.00)</span>
+          </div>
+        </div>
+        <div class="card-sparkline-wrap">
+          <canvas id="sparkline-xau" class="card-sparkline-canvas"></canvas>
+        </div>
+        <div class="card-range-bar-wrap">
+          <div class="range-labels">
+            <span id="low-xau">Low: --</span>
+            <span id="high-xau">High: --</span>
+          </div>
+          <div class="range-track">
+            <div class="range-fill" id="range-fill-xau" style="width: 65%; background: var(--gold-gradient);"></div>
+          </div>
+        </div>
+      </article>
+
+      <!-- 2. Silver Card -->
+      <article class="metal-card card-xag" id="card-xag" data-symbol="XAG" onclick="scrollToChart('chart-container-xag')">
+        <div class="card-header">
+          <div class="metal-identity">
+            <div class="metal-badge-icon">🥈</div>
+            <div class="metal-names">
+              <h3>은 (Silver)</h3>
+              <span class="symbol-tag">XAG / USD</span>
+            </div>
+          </div>
+          <button class="card-action-btn" title="차트 보기">
+            차트 ↓
+          </button>
+        </div>
+        <div class="card-price-body">
+          <div class="price-main">
+            <span class="price-val" id="price-xag">--</span>
+            <span class="price-unit-label" id="unit-label-xag">/ oz</span>
+          </div>
+          <div class="change-row">
+            <span class="change-badge up" id="change-badge-xag">▲ +0.00%</span>
+            <span class="change-diff" id="diff-xag">(+$0.00)</span>
+          </div>
+        </div>
+        <div class="card-sparkline-wrap">
+          <canvas id="sparkline-xag" class="card-sparkline-canvas"></canvas>
+        </div>
+        <div class="card-range-bar-wrap">
+          <div class="range-labels">
+            <span id="low-xag">Low: --</span>
+            <span id="high-xag">High: --</span>
+          </div>
+          <div class="range-track">
+            <div class="range-fill" id="range-fill-xag" style="width: 50%; background: var(--silver-gradient);"></div>
+          </div>
+        </div>
+      </article>
+
+      <!-- 3. Copper Card -->
+      <article class="metal-card card-xcu" id="card-xcu" data-symbol="XCU" onclick="scrollToChart('chart-container-xcu')">
+        <div class="card-header">
+          <div class="metal-identity">
+            <div class="metal-badge-icon">🥉</div>
+            <div class="metal-names">
+              <h3>구리 (Copper)</h3>
+              <span class="symbol-tag">XCU / COMEX</span>
+            </div>
+          </div>
+          <button class="card-action-btn" title="차트 보기">
+            차트 ↓
+          </button>
+        </div>
+        <div class="card-price-body">
+          <div class="price-main">
+            <span class="price-val" id="price-xcu">--</span>
+            <span class="price-unit-label" id="unit-label-xcu">/ lb</span>
+          </div>
+          <div class="change-row">
+            <span class="change-badge up" id="change-badge-xcu">▲ +0.00%</span>
+            <span class="change-diff" id="diff-xcu">(+$0.00)</span>
+          </div>
+        </div>
+        <div class="card-sparkline-wrap">
+          <canvas id="sparkline-xcu" class="card-sparkline-canvas"></canvas>
+        </div>
+        <div class="card-range-bar-wrap">
+          <div class="range-labels">
+            <span id="low-xcu">Low: --</span>
+            <span id="high-xcu">High: --</span>
+          </div>
+          <div class="range-track">
+            <div class="range-fill" id="range-fill-xcu" style="width: 70%; background: var(--copper-gradient);"></div>
+          </div>
+        </div>
+      </article>
+
+      <!-- 4. Platinum Card -->
+      <article class="metal-card card-xpt" id="card-xpt" data-symbol="XPT" onclick="scrollToChart('chart-container-xpt')">
+        <div class="card-header">
+          <div class="metal-identity">
+            <div class="metal-badge-icon">💍</div>
+            <div class="metal-names">
+              <h3>플래티넘 (Platinum)</h3>
+              <span class="symbol-tag">XPT / USD</span>
+            </div>
+          </div>
+          <button class="card-action-btn" title="차트 보기">
+            차트 ↓
+          </button>
+        </div>
+        <div class="card-price-body">
+          <div class="price-main">
+            <span class="price-val" id="price-xpt">--</span>
+            <span class="price-unit-label" id="unit-label-xpt">/ oz</span>
+          </div>
+          <div class="change-row">
+            <span class="change-badge up" id="change-badge-xpt">▲ +0.00%</span>
+            <span class="change-diff" id="diff-xpt">(+$0.00)</span>
+          </div>
+        </div>
+        <div class="card-sparkline-wrap">
+          <canvas id="sparkline-xpt" class="card-sparkline-canvas"></canvas>
+        </div>
+        <div class="card-range-bar-wrap">
+          <div class="range-labels">
+            <span id="low-xpt">Low: --</span>
+            <span id="high-xpt">High: --</span>
+          </div>
+          <div class="range-track">
+            <div class="range-fill" id="range-fill-xpt" style="width: 58%; background: var(--plat-gradient);"></div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <!-- ====================================================================
+         Section 2: Period Selector & Filter Controls
+         ==================================================================== -->
+    <div class="period-control-panel" id="period-control-panel">
+      <div class="period-title-wrap">
+        <div class="icon-box">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+        </div>
+        <div>
+          <h3>기간별 시세 변동 추이</h3>
+          <p>원하는 기간을 선택하면 하단의 모든 금속 차트가 동기화되어 세로로 1개씩 표시됩니다.</p>
+        </div>
+      </div>
+
+      <div class="period-buttons-group" id="period-buttons-group" role="group" aria-label="차트 기간 선택">
+        <button class="period-btn active" data-period="5d">5일 (5D)</button>
+        <button class="period-btn" data-period="1w">1주일 (1W)</button>
+        <button class="period-btn" data-period="1m">1개월 (1M)</button>
+        <button class="period-btn" data-period="3m">3개월 (3M)</button>
+        <button class="period-btn" data-period="1y">1년 (1Y)</button>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         Section 3: Vertical Independent Charts Stack (세로 1개씩 독립 차트)
+         ==================================================================== -->
+    <section class="vertical-charts-container" id="vertical-charts-container" aria-label="금속별 시세 변동 독립 차트 목록">
+      
+      <!-- Chart 1: Gold (금) -->
+      <article class="chart-card theme-xau" id="chart-container-xau">
+        <div class="chart-card-header">
+          <div class="chart-metal-info">
+            <div class="chart-metal-icon">🥇</div>
+            <div class="chart-metal-titles">
+              <h3>금 (Gold - XAU) 시세 변동</h3>
+              <p>안전자산의 대표 주자 • 온스당 글로벌 기준 시세</p>
+            </div>
+          </div>
+          <div class="chart-stats-summary">
+            <div class="stat-item">
+              <span class="stat-label">기간 최저</span>
+              <span class="stat-value" id="chart-stat-low-xau">--</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">기간 최고</span>
+              <span class="stat-value" id="chart-stat-high-xau">--</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">기간 변동</span>
+              <span class="stat-value highlight-up" id="chart-stat-change-xau">--</span>
+            </div>
+          </div>
+        </div>
+        <div class="chart-canvas-wrapper">
+          <canvas id="chart-canvas-xau"></canvas>
+        </div>
+      </article>
+
+      <!-- Chart 2: Silver (은) -->
+      <article class="chart-card theme-xag" id="chart-container-xag">
+        <div class="chart-card-header">
+          <div class="chart-metal-info">
+            <div class="chart-metal-icon">🥈</div>
+            <div class="chart-metal-titles">
+              <h3>은 (Silver - XAG) 시세 변동</h3>
+              <p>산업재 및 귀금속 듀얼 수요 • 온스당 기준 시세</p>
+            </div>
+          </div>
+          <div class="chart-stats-summary">
+            <div class="stat-item">
+              <span class="stat-label">기간 최저</span>
+              <span class="stat-value" id="chart-stat-low-xag">--</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">기간 최고</span>
+              <span class="stat-value" id="chart-stat-high-xag">--</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">기간 변동</span>
+              <span class="stat-value highlight-up" id="chart-stat-change-xag">--</span>
+            </div>
+          </div>
+        </div>
+        <div class="chart-canvas-wrapper">
+          <canvas id="chart-canvas-xag"></canvas>
+        </div>
+      </article>
+
+      <!-- Chart 3: Copper (구리) -->
+      <article class="chart-card theme-xcu" id="chart-container-xcu">
+        <div class="chart-card-header">
+          <div class="chart-metal-info">
+            <div class="chart-metal-icon">🥉</div>
+            <div class="chart-metal-titles">
+              <h3>구리 (Copper - XCU) 시세 변동</h3>
+              <p>글로벌 실물 경기 풍향계(Dr. Copper) • 파운드(lb)당 기준 시세</p>
+            </div>
+          </div>
+          <div class="chart-stats-summary">
+            <div class="stat-item">
+              <span class="stat-label">기간 최저</span>
+              <span class="stat-value" id="chart-stat-low-xcu">--</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">기간 최고</span>
+              <span class="stat-value" id="chart-stat-high-xcu">--</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">기간 변동</span>
+              <span class="stat-value highlight-up" id="chart-stat-change-xcu">--</span>
+            </div>
+          </div>
+        </div>
+        <div class="chart-canvas-wrapper">
+          <canvas id="chart-canvas-xcu"></canvas>
+        </div>
+      </article>
+
+      <!-- Chart 4: Platinum (플래티넘) -->
+      <article class="chart-card theme-xpt" id="chart-container-xpt">
+        <div class="chart-card-header">
+          <div class="chart-metal-info">
+            <div class="chart-metal-icon">💍</div>
+            <div class="chart-metal-titles">
+              <h3>플래티넘 (Platinum - XPT) 시세 변동</h3>
+              <p>첨단 친환경 촉매 및 프리미엄 귀금속 • 온스당 기준 시세</p>
+            </div>
+          </div>
+          <div class="chart-stats-summary">
+            <div class="stat-item">
+              <span class="stat-label">기간 최저</span>
+              <span class="stat-value" id="chart-stat-low-xpt">--</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">기간 최고</span>
+              <span class="stat-value" id="chart-stat-high-xpt">--</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">기간 변동</span>
+              <span class="stat-value highlight-up" id="chart-stat-change-xpt">--</span>
+            </div>
+          </div>
+        </div>
+        <div class="chart-canvas-wrapper">
+          <canvas id="chart-canvas-xpt"></canvas>
+        </div>
+      </article>
+
+    </section>
+
+    <!-- ====================================================================
+         Utility: Quick Metal Value Calculator
+         ==================================================================== -->
+    <section class="calculator-section" id="metal-calculator">
+      <div class="calculator-header">
+        <span style="font-size: 1.5rem;">⚖️</span>
+        <div>
+          <h3>실시간 금속 가치 계산기</h3>
+          <p style="font-size: 0.8rem; color: var(--text-muted);">보유한 금속의 중량을 입력하면 현재 실시간 시세 기준으로 즉시 환산해 드립니다.</p>
+        </div>
+      </div>
+      <div class="calc-grid">
+        <div class="calc-field">
+          <label for="calc-metal-select">금속 종류</label>
+          <select id="calc-metal-select" class="calc-select">
+            <option value="XAU" selected>금 (Gold)</option>
+            <option value="XAG">은 (Silver)</option>
+            <option value="XCU">구리 (Copper)</option>
+            <option value="XPT">플래티넘 (Platinum)</option>
+          </select>
+        </div>
+        <div class="calc-field">
+          <label for="calc-weight-input">보유 중량</label>
+          <input type="number" id="calc-weight-input" class="calc-input" value="10" min="0.01" step="any">
+        </div>
+        <div class="calc-field">
+          <label for="calc-unit-select">중량 단위</label>
+          <select id="calc-unit-select" class="calc-select">
+            <option value="g" selected>그램 (g)</option>
+            <option value="don">한국 돈 (3.75g)</option>
+            <option value="oz">트로이 온스 (oz)</option>
+            <option value="kg">킬로그램 (kg)</option>
+          </select>
+        </div>
+        <div class="calc-field">
+          <label>평가 가치</label>
+          <div class="calc-result-box">
+            <span class="result-label" id="calc-result-currency">KRW 기준</span>
+            <span class="result-val" id="calc-result-value">계산 중...</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         Footer: Source & Credits
+         ==================================================================== -->
+    <footer class="app-footer">
+      <p>© 2026 MetalMarket. All rights reserved. Data powered by <a href="https://metalpriceapi.com/" target="_blank" rel="noopener noreferrer">MetalpriceAPI</a>.</p>
+      <div class="footer-badges">
+        <span class="footer-badge">실시간 시세 자동 갱신</span>
+        <span class="footer-badge">Chart.js 시각화</span>
+        <span class="footer-badge">다크 글래스모피즘 테마</span>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- Toast Notice -->
+  <div class="toast-notice" id="toast-notice">
+    <span id="toast-message">알림 메시지</span>
+  </div>
+
+  <!-- Scripts -->
+  <script src="api.js"></script>
+  <script src="charts.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
